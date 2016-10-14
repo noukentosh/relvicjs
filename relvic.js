@@ -1,48 +1,83 @@
 'use struct';
 
+HTMLElement.prototype.render = function(element) {
+    //Relvic.lastid -= 1;
+    //element.setAttribute('relvic-id', this.getAttribute('relvic-id'));
+    this.outerHTML = element.outerHTML;
+}
+
 var Relvic = {
-    createClass: function(obj) {
-        obj.state = {};
+    lastid: -1,
+    nextid: function() {
+        this.lastid += 1;
+        return this.lastid;
+    },
+    getRelvicId: function(id) {
+        return document.querySelector(`[relvic-id='${id}']`);
+    },
+    createElement: (tag, props, ...childrens) => {
+        switch (typeof tag) {
+            case 'string':
+                {
+                    let el = document.createElement(tag);
+                    if (props != null)
+                        Object.keys(props).forEach(function(prop) {
+                            switch (prop) {
+                                case 'handleInput':
+                                    {
+                                        el.addEventListener('input', tag[props[prop]]);
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        el.setAttribute(prop, props[prop]);
+                                    }
+                            }
+                        });
+                    childrens.forEach(function(child) {
+                        if (typeof child == 'string') el.appendChild(document.createTextNode(child));
+                        else if (Array.isArray(child))
+                            child.forEach(function(c) {
+                                el.appendChild(c);
+                            });
+                        else el.appendChild(child);
+                    });
+                    return el;
+                }
+            case 'object':
+                {
+                    if (props !== undefined)
+                        tag.props = props;
+                    tag.childrens = childrens;
+                    let el = tag.render();
+                    if (tag.componentDidMount !== undefined && tag.timer === undefined)
+                        tag.componentDidMount();
+                    let id = Relvic.nextid();
+                    el.setAttribute('relvic-id', id);
+                    tag.HTMLElements.push(id);
+                    return el;
+                }
+        }
+    },
+    createClass: (obj) => {
         if (obj.getInitialState !== undefined)
             obj.state = obj.getInitialState();
-        obj.__state = obj.state;
-        obj.binded = [];
-        if (obj.render === undefined)
-            console.error(`Error: Can't create class without "render" function.`);
+        obj.setState = function(state) {
+            this.state = state;
+            let self = this;
+            this.HTMLElements.forEach(function(key) {
+                try {
+                    Relvic.getRelvicId(key).render(Relvic.createElement(self));
+                } catch (error) {
+                    self.HTMLElements[key] = undefined;
+                }
+            });
+        }
+        obj.HTMLElements = new Array();
         return obj;
     },
-    render: function(tag, root = undefined) {
-        if (root === undefined)
-            return window[tag].render();
-        let tmp = document.createElement('div');
-        root.innerHTML = window[tag].render();
-        let el = tmp.childNodes[0];
-        root.querySelectorAll('[click]').forEach(function(item) {
-            item.addEventListener('click', function() {
-                window[tag][item.getAttribute('click')]();
-            });
-        });
-        Object.keys(window[tag].state).forEach(function(key) {
-            document.querySelectorAll(`[bind-value='${key}']`).forEach(function(e) {
-                window[tag].binded.push(e);
-                e.addEventListener('input', function() {
-                    window[tag].binded.forEach(function(q) {
-                        if (q === e) return;
-                        q.value = e.value;
-                    });
-                });
-            });
-            Object.defineProperty(window[tag].state, key, {
-                get: function() {
-                    return window[tag].__state[key];
-                },
-                set: function(newValue) {
-                    window[tag].binded.forEach(function(q) {
-                        q.value = newValue;
-                    });
-                },
-                configurable: true
-            });
-        });
+    render: (element, root) => {
+        if (typeof element == 'string') root.innerHTML = element;
+        else root.innerHTML = element.outerHTML;
     }
 };

@@ -9,27 +9,7 @@
 <body>
     <div id="root"></div>
     <script src="relvic.js"></script>
-    <script>
-        var App = Relvic.createClass({
-            getInitialState: function() {
-                return {
-                    hello: "Hello world",
-                    another: "Another"
-                };
-            },
-            handleClick: function(e) {
-                this.state.hello = "qweqweqwe";
-            },
-            render: function() {
-                return `<div class="application">
-                            <input type="text" bind-value="hello" value="${this.state.hello}">
-                            <input type="text" bind-value="hello" value="${this.state.hello}">
-                            <button click="handleClick">${this.state.hello}</button>
-                        </div>`;
-            }
-        });
-        Relvic.render('App', document.getElementById('root'));
-    </script>
+    <script src="demo.js"></script>
 </body>
 
 </html>
