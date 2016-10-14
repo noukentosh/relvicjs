@@ -5,6 +5,8 @@ var Relvic = {
         obj.state = {};
         if (obj.getInitialState !== undefined)
             obj.state = obj.getInitialState();
+        obj.__state = obj.state;
+        obj.binded = [];
         if (obj.render === undefined)
             console.error(`Error: Can't create class without "render" function.`);
         return obj;
@@ -20,10 +22,26 @@ var Relvic = {
                 window[tag][item.getAttribute('click')]();
             });
         });
-        root.querySelectorAll('[bind-value]').forEach(function(item) {
-            item.addEventListener('change', function() {
-                window[tag].state[item.getAttribute('bind-value')] = item.value;
-                Relvic.render(tag, root);
+        Object.keys(window[tag].state).forEach(function(key) {
+            document.querySelectorAll(`[bind-value='${key}']`).forEach(function(e) {
+                window[tag].binded.push(e);
+                e.addEventListener('input', function() {
+                    window[tag].binded.forEach(function(q) {
+                        if (q === e) return;
+                        q.value = e.value;
+                    });
+                });
+            });
+            Object.defineProperty(window[tag].state, key, {
+                get: function() {
+                    return window[tag].__state[key];
+                },
+                set: function(newValue) {
+                    window[tag].binded.forEach(function(q) {
+                        q.value = newValue;
+                    });
+                },
+                configurable: true
             });
         });
     }

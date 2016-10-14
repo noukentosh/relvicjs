@@ -18,13 +18,14 @@
                 };
             },
             handleClick: function(e) {
-                console.log("Clicked");
+                this.state.hello = "qweqweqwe";
             },
             render: function() {
                 return `<div class="application">
-                    <input type="text" bind-value="hello" value="${this.state.hello}">
-                    <button click="handleClick">${this.state.hello}</button>
-                  </div>`;
+                            <input type="text" bind-value="hello" value="${this.state.hello}">
+                            <input type="text" bind-value="hello" value="${this.state.hello}">
+                            <button click="handleClick">${this.state.hello}</button>
+                        </div>`;
             }
         });
         Relvic.render('App', document.getElementById('root'));
