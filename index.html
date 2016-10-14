@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Relvic example</title>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script src="relvic.js"></script>
+    <script>
+        var App = Relvic.createClass({
+            getInitialState: function() {
+                return {
+                    hello: "Hello world",
+                    another: "Another"
+                };
+            },
+            handleClick: function(e) {
+                console.log("Clicked");
+            },
+            render: function() {
+                return `<div class="application">
+                    <input type="text" bind-value="hello" value="${this.state.hello}">
+                    <button click="handleClick">${this.state.hello}</button>
+                  </div>`;
+            }
+        });
+        Relvic.render('App', document.getElementById('root'));
+    </script>
+</body>
+
+</html>
