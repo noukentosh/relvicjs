@@ -1,3 +1,4 @@
+console.time('demo');
 var data = [
     { id: 1, author: "Pete Hunt", text: "This is one comment" },
     { id: 2, author: "Jordan Walke", text: "This is *another* comment" }
@@ -31,14 +32,14 @@ var CommentList = Relvic.createClass({
 
 var CommentForm = Relvic.createClass({
     getInitialState: function() {
-        return { author: "" };
+        return { author: "Test" };
     },
-    handleInput: function() {
-        console.log("input");
+    handleInput: function(e) {
+        this.setState({ author: e.target.value });
     },
     render: function() {
         return (
-            Relvic.createElement('div', { class: "commentForm" }, Relvic.createElement('input', { handleInput: 'handleInput' }))
+            Relvic.createElement('div', { class: "commentForm" }, Relvic.createTemplate `Hello ${this.state.author}`, Relvic.createElement('input', { handleInput: this.handleInput.bind(this) }))
         );
     }
 });
@@ -60,3 +61,4 @@ var CommentBox = Relvic.createClass({
 });
 
 Relvic.render(Relvic.createElement(CommentBox), document.getElementById('root'));
+console.timeEnd('demo');
