@@ -1,25 +1,63 @@
 'use struct';
 
-HTMLElement.prototype.render = function(element) {
-    //Relvic.lastid -= 1;
-    //element.setAttribute('relvic-id', this.getAttribute('relvic-id'));
-    this.outerHTML = element.outerHTML;
+class RelvicComponent {
+    constructor(obj) {
+        let self = this;
+        this.render = undefined;
+        Object.keys(obj).forEach(function(key) {
+            self[key] = obj[key];
+        });
+        if (this.getInitialState !== undefined)
+            this.state = this.getInitialState();
+        this.HTMLElements = new Array();
+        this.onchangestate = new Array();
+        Relvic.__current_root = this;
+    }
+    setState(state) {
+        let self = this;
+        Object.keys(state).forEach(function(key) {
+            self.state[key] = state[key];
+        });
+        this.onchangestate.forEach(function(el) {
+            el.template.finish = el.template.raw;
+            el.template.varnames.forEach(function(v) {
+                el.template.finish = el.template.finish.replace(`{{${v}}}`, eval(v.replace('this', 'self')));
+            });
+            Relvic.getElementById(el.id).textContent = el.template.finish;
+        });
+    }
 }
 
-var Relvic = {
-    version: '0.0.1-dev',
-    __classes: new Array(),
-    __current_root: undefined,
-    onrender: new Array(),
-    lastid: -1,
-    nextid: () => {
-        Relvic.lastid += 1;
-        return Relvic.lastid;
-    },
-    getRelvicId: (id) => {
+class RelvicProto {
+    constructor() {
+        this.version = '0.0.1-dev';
+        this.__current_root = undefined;
+        this.onrender = new Array();
+        this.lastid = -1;
+    }
+    get nextid() {
+        this.lastid += 1;
+        return this.lastid;
+    }
+    set nextid(val) {
+        console.log(new Error("You can't set `nextid`"));
+    }
+    getElementById(id) {
         return document.querySelector(`[relvic-id='${id}']`);
-    },
-    createElement: (tag, props, ...childrens) => {
+    }
+    handleEvent(el, event, fn) {
+        let id = el.getAttribute('relvic-id');
+        if (id == undefined) {
+            id = this.nextid;
+            el.setAttribute('relvic-id', id);
+        }
+        this.onrender.push(
+            function() {
+                Relvic.getElementById(id).addEventListener(event, fn);
+            }
+        );
+    }
+    createElement(tag, props, ...childrens) {
         switch (typeof tag) {
             case 'string':
                 {
@@ -29,16 +67,12 @@ var Relvic = {
                             switch (prop) {
                                 case 'handleInput':
                                     {
-                                        let id = el.getAttribute('relvic-id');
-                                        if (id == undefined) {
-                                            id = Relvic.nextid();
-                                            el.setAttribute('relvic-id', id);
-                                        }
-                                        Relvic.onrender.push(
-                                            function() {
-                                                Relvic.getRelvicId(id).addEventListener('input', props[prop]);
-                                            }
-                                        );
+                                        Relvic.handleEvent(el, 'input', props[prop]);
+                                        break;
+                                    }
+                                case 'handleClick':
+                                    {
+                                        Relvic.handleEvent(el, 'click', props[prop]);
                                         break;
                                     }
                                 default:
@@ -47,7 +81,7 @@ var Relvic = {
                                     }
                             }
                         });
-                    Relvic.__current_root = el;
+                    this.__current_root = el;
                     childrens.forEach(function(child) {
                         if (typeof child == 'string') el.appendChild(document.createTextNode(child));
                         else if (Array.isArray(child))
@@ -66,12 +100,12 @@ var Relvic = {
                 {
                     if (props !== undefined)
                         tag.props = props;
-                    Relvic.__current_root = tag;
+                    this.__current_root = tag;
                     tag.childrens = childrens;
                     let el = tag.render();
                     if (tag.componentDidMount !== undefined && tag.timer === undefined)
                         tag.componentDidMount();
-                    let id = Relvic.nextid();
+                    let id = this.nextid;
                     if (typeof el == 'string') {
                         let tmp = document.createElement('div');
                         tmp.innerHTML = el;
@@ -82,44 +116,38 @@ var Relvic = {
                     return el;
                 }
         }
-    },
-    createClass: (obj) => {
-        Relvic.__current_root = obj;
-        if (obj.getInitialState !== undefined)
-            obj.state = obj.getInitialState();
-        obj.setState = function(state) {
-            this.state = state;
-            let self = this;
-            /*this.HTMLElements.forEach(function(key) {
-                try {
-                    Relvic.getRelvicId(key).render(Relvic.createElement(self));
-                } catch (error) {
-                    self.HTMLElements[key] = undefined;
-                }
-            });*/
-        }
-        obj.HTMLElements = new Array();
-        Relvic.__classes.push(obj);
-        return Relvic.__classes[Relvic.__classes.length - 1];
-    },
-    createTemplate: function(template, ...values) {
-        let ret = document.createElement('div');
-        template.raw.forEach(function(rawStr, k) {
-            ret.appendChild(document.createTextNode(rawStr));
-            if (values[k] !== undefined) {
-                let el = document.createElement('span');
-                el.setAttribute('relvic-id', Relvic.nextid());
-                el.textContent = values[k];
-                ret.appendChild(el);
-            }
+    }
+    createTemplate(template) {
+        template = {
+            raw: template,
+            varnames: template.match(/({{)+\S+(}})/g).map(function(varname) {
+                return varname.substring(2, varname.length - 2);
+            }),
+            finish: template
+        };
+        template.varnames.forEach(function(v) {
+            template.finish = template.finish.replace(`{{${v}}}`, eval(v.replace('this', 'Relvic.__current_root')));
         });
-        return ret.childNodes;
-    },
-    render: (element, root) => {
+        let ret = document.createElement('span');
+        let id = this.nextid;
+        ret.setAttribute('relvic-id', id);
+        ret.textContent = template.finish;
+        this.__current_root.onchangestate.push({
+            id,
+            template
+        });
+        return ret;
+    }
+    createClass(obj) {
+        return new RelvicComponent(obj);
+    }
+    render(element, root) {
         if (typeof element == 'string') root.innerHTML = element;
         else root.innerHTML = element.outerHTML;
-        Relvic.onrender.forEach(function(item) {
+        this.onrender.forEach(function(item) {
             item();
         });
     }
-};
+}
+
+var Relvic = new RelvicProto();

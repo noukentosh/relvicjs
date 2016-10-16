@@ -5,6 +5,7 @@ var data = [
 ];
 
 var Comment = Relvic.createClass({
+    displayName: 'Comment',
     render: function() {
         return (
             Relvic.createElement('div', { class: "comment" },
@@ -37,9 +38,12 @@ var CommentForm = Relvic.createClass({
     handleInput: function(e) {
         this.setState({ author: e.target.value });
     },
+    handleClick: function(e) {
+        console.log(this.state.author);
+    },
     render: function() {
         return (
-            Relvic.createElement('div', { class: "commentForm" }, Relvic.createTemplate `Hello ${this.state.author}`, Relvic.createElement('input', { handleInput: this.handleInput.bind(this) }))
+            Relvic.createElement('div', { class: "commentForm" }, Relvic.createTemplate("Hello {{this.state.author}}"), Relvic.createElement('br'), Relvic.createElement('input', { handleInput: this.handleInput.bind(this), handleClick: this.handleClick.bind(this), value: this.state.author }))
         );
     }
 });
